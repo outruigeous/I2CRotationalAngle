@@ -24,18 +24,45 @@ float oldGyroAngleY = 0.0;
 float newGyroAngleY = 0.0;
 float oldGyroAngleZ = 0.0;
 float newGyroAngleZ = 0.0;
+//calibration
+float calibrationOffsetX = 0.0;
+float calibrationOffsetY = 0.0;
+float calibrationOffsetZ = 0.0;
+
 
 void setup(){
     Wire.begin(sda,scl); //to call the SDA and SCL
     Serial.begin(115200);
-}
-void loop(){
+    Serial.println("Calibration Start!");
+    for (int i = 0; i < 100; i ++) { //calibrate
+        readGyrometer();
+        calibrationOffsetX += gyroX_Per_S;
+        calibrationOffsetY += gyroY_Per_S;
+        calibrationOffsetZ += gyroZ_Per_S;
+        delay(50);
+    }
+    // Calculate the average calibration offsets
+    calibrationOffsetX /= 100.0;
+    calibrationOffsetY /= 100.0;
+    calibrationOffsetZ /= 100.0;
 
+    Serial.println("Calibration End");
+    Serial.println(calibrationOffsetX);
+    Serial.println(calibrationOffsetY);
+    Serial.println(calibrationOffsetZ);
+    
+    oldGyroAngleX = 0.0;
+    oldGyroAngleY = 0.0;
+    oldGyroAngleZ = 0.0;
+
+    }
+
+void loop(){
   readGyrometer();
+  printAngle();
   delay(100);
 
 }
-
 
 void readGyrometer(){
   Wire.beginTransmission(address);
@@ -62,14 +89,17 @@ void readGyrometer(){
   elapsedTime = (currentTime - previousTime) / 1000;
   previousTime = currentTime;
 
-  newGyroAngleX = oldGyroAngleX + gyroX_Per_S * elapsedTime;
-  newGyroAngleY = oldGyroAngleY + gyroY_Per_S * elapsedTime;
-  newGyroAngleZ = oldGyroAngleZ + gyroZ_Per_S * elapsedTime;
+  newGyroAngleX = oldGyroAngleX + (gyroX_Per_S - calibrationOffsetX) * elapsedTime;
+  newGyroAngleY = oldGyroAngleY + (gyroY_Per_S - calibrationOffsetY) * elapsedTime;
+  newGyroAngleZ = oldGyroAngleZ + (gyroZ_Per_S - calibrationOffsetZ) * elapsedTime;
 
   oldGyroAngleX = newGyroAngleX;
   oldGyroAngleY = newGyroAngleY;
   oldGyroAngleZ = newGyroAngleZ;
 
+}
+
+void printAngle(){
   Serial.print("Angle X-axis:");
   Serial.print(newGyroAngleX);
   Serial.print(",");
@@ -78,5 +108,4 @@ void readGyrometer(){
   Serial.print(",");
   Serial.print("Angle Z-axis:");
   Serial.println(newGyroAngleZ);
-
 }
